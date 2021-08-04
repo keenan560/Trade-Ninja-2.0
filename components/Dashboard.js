@@ -35,7 +35,6 @@ const Stack = createStackNavigator();
 
 function Dashboard({ navigation }) {
   const userContext = useContext(UserContext);
-  console.log(userContext.userState.user.user.uid);
 
   return (
     <Tab.Navigator
@@ -74,7 +73,7 @@ function Dashboard({ navigation }) {
       <Tab.Screen
         name="Trade"
         component={Trade}
-        options={{ tabBarBadge: null }}
+        options={{ tabBarBadge: null, name: "Trade" }}
       />
       <Tab.Screen
         name="Stash"

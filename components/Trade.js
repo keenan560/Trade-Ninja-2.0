@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useContext } from "react";
 import { View, Text, StyleSheet, TextInput, ScrollView } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "react-native-elements";
 import { Picker } from "@react-native-picker/picker";
+import { UserContext } from "../App";
 import * as firebase from "firebase";
 import "firebase/auth";
 //import "firebase/database";
@@ -24,7 +25,10 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
-function Trade() {
+const apiKey = "c43kis2ad3if0j0spuj0";
+
+function Trade({ navigation }) {
+  const userContext = useContext(UserContext);
   const {
     control,
     handleSubmit,
@@ -32,65 +36,121 @@ function Trade() {
     reset,
   } = useForm();
 
-  const onSubmit = (data, event) => {
+  const onSubmit = async (data, event) => {
     console.log(data);
+
+    await firebase
+      .firestore()
+      .collection("users")
+      .doc(`${userContext.userState.user.user.uid}`)
+      .collection("trades")
+      .add({
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        symbol: ticker,
+        desc: companyName.description,
+        price: currentPrice,
+        type: data.transactionType,
+        quantity: quantity,
+        total: parseFloat(quantity * currentPrice).toFixed(2),
+      })
+      .then((docRef) => {
+        console.log("Document written with ID: ", docRef.id);
+      })
+      .catch((error) => {
+        console.error("Error adding document: ", error);
+      });
+
+    await firebase
+      .firestore()
+      .collection("users")
+      .doc(`${userContext.userState.user.user.uid}`)
+      .collection("holdings")
+      .doc(ticker)
+      .set({
+        symbol: ticker,
+        quantity: quantity,
+        desc: companyName.description,
+      });
+
+    setTicker("");
+    setCompanyName("");
+    setCurrentPrice("");
+    setQuantity("");
     reset({
-      price: "",
-      ticker: "",
-      quantity: "",
       transactionType: "",
     });
   };
   const [selectedTransType, setSelectedTransType] = useState("");
-  const pickerRef = useRef();
+  const [ticker, setTicker] = useState("");
+  const [currentPrice, setCurrentPrice] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [quantity, setQuantity] = useState("");
 
+  console.log(ticker);
+  const tickerSearch = (text) => {
+    if (ticker) {
+      fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`)
+        .then((response) => response.json())
+        .then((data) => setCurrentPrice(data.c));
+
+      fetch(`https://finnhub.io/api/v1/search?q=${ticker}&token=${apiKey}`)
+        .then((response) => response.json())
+        .then((data) => setCompanyName(data.result[0]));
+    } else {
+      setTicker("");
+      setCurrentPrice("");
+      setCompanyName("");
+      setQuantity("");
+    }
+  };
+
+  const formatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  });
+
+  console.log([companyName.description, currentPrice]);
   return (
     <View style={styles.container}>
-      <ScrollView>
+      <ScrollView style={{ width: 320 }} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Order Form</Text>
-        <Controller
-          control={control}
-          rules={{
-            required: true,
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="Enter Ticker"
-              placeholderTextColor="#fff"
-            />
-          )}
-          name="ticker"
-          defaultValue=""
-        />
-        {errors.ticker && <Text style={styles.error}>This is required.</Text>}
 
-        <Controller
-          control={control}
-          rules={{
-            maxLength: 100,
-            required: true,
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="Enter Desired Price"
-              placeholderTextColor="#fff"
-            />
-          )}
-          name="price"
-          defaultValue=""
+        <TextInput
+          style={styles.input}
+          onChangeText={(text) => setTicker(text.toLocaleUpperCase())}
+          onEndEditing={tickerSearch}
+          value={ticker}
+          placeholder="Enter Ticker"
+          placeholderTextColor="#fff"
         />
-        {errors.price && <Text style={styles.error}>This is required.</Text>}
-        <Text style={{ color: "#fff", textAlign: "left", fontSize: 18 }}>
-          Select Transaction Type{" "}
+
+        <Text
+          style={{
+            color: "#fff",
+            textAlign: "left",
+            fontSize: 18,
+            marginTop: 50,
+            marginBottom: 20,
+          }}
+        >
+          <Text style={{ color: "#DFA40D", width: 320, fontSize: 18 }}>
+            {companyName ? companyName.description : "None"}
+          </Text>
         </Text>
+        <Text
+          style={{
+            color: "#fff",
+            textAlign: "left",
+            fontSize: 50,
+            marginBottom: 20,
+          }}
+        >
+          <Text style={{ color: "#59e00f" }}>
+            {currentPrice ? formatter.format(currentPrice) : "$0"}
+          </Text>{" "}
+        </Text>
+
         <Controller
           control={control}
           rules={{
@@ -102,9 +162,8 @@ function Trade() {
               style={{
                 width: "100%",
                 height: 150,
-                // alignItems: "center",
+
                 color: "#fff",
-         
               }}
               selectedValue={value}
               onValueChange={onChange}
@@ -112,6 +171,7 @@ function Trade() {
               value={value}
               itemStyle={styles.item}
             >
+              <Picker.Item label="Select Transaction Type" value={null} />
               <Picker.Item label="Buy" value="Buy" />
               <Picker.Item label="Sell" value="Sell" />
             </Picker>
@@ -123,30 +183,20 @@ function Trade() {
           <Text style={styles.error}>Please select transaction type.</Text>
         )}
 
-        <Controller
-          control={control}
-          rules={{
-            maxLength: 100,
-            minLength: 1,
-            required: true,
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="Quantity"
-              placeholderTextColor="#fff"
-            />
-          )}
-          name="quantity"
-          defaultValue=""
+        <TextInput
+          style={styles.input}
+          onChangeText={(text) => setQuantity(parseInt(text))}
+          value={quantity}
+          placeholder={"Quantity"}
+          placeholderTextColor="#fff"
         />
-        {errors.quantity && (
-          <Text style={styles.error}>Minimum of 6 characters.</Text>
-        )}
-
+        {!quantity && <Text style={styles.error}>Please enter a quanty.</Text>}
+        {currentPrice && quantity ? (
+          <Text style={{ color: "#fff", fontSize: 18 }}>
+            Total:
+            {formatter.format(parseFloat(quantity * currentPrice).toFixed(2))}
+          </Text>
+        ) : null}
         <Button
           buttonStyle={styles.button}
           title={"Trade"}
@@ -195,6 +245,6 @@ const styles = StyleSheet.create({
     height: 65,
     marginBottom: 10,
     borderRadius: 10,
-    marginTop: 75,
+    marginTop: 65,
   },
 });
