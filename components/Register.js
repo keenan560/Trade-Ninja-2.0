@@ -53,6 +53,7 @@ function Register({ navigation }) {
             email: authUser.user.email,
             firstName: data.firstName,
             lastName: data.lastName,
+            cashBal: 100000
           })
           .catch((error) => alert(error.message));
         alert("Please login " + data.firstName);

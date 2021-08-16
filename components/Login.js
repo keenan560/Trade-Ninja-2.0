@@ -9,6 +9,8 @@ import "firebase/firestore";
 //import "firebase/functions";
 //import "firebase/storage";
 
+
+
 const firebaseConfig = {
   apiKey: "AIzaSyBwRxZbifzgYYu59xXbFmomJwA1802mV3Y",
   authDomain: "trade-ninja.firebaseapp.com",

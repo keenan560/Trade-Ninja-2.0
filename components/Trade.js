@@ -1,9 +1,10 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { View, Text, StyleSheet, TextInput, ScrollView } from "react-native";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, set } from "react-hook-form";
 import { Button } from "react-native-elements";
 import { Picker } from "@react-native-picker/picker";
 import { UserContext } from "../App";
+import Numeral from "numeral";
 import * as firebase from "firebase";
 import "firebase/auth";
 //import "firebase/database";
@@ -36,49 +37,252 @@ function Trade({ navigation }) {
     reset,
   } = useForm();
 
-  const onSubmit = async (data, event) => {
-    console.log(data);
+  const [userHoldings, setUserHoldings] = useState([]);
+  const [inHoldings, setInHoldings] = useState(false);
+  const [tickerHolding, setTickerHoldings] = useState(0);
+  const [cashBal, setCashBal] = useState(0);
 
-    await firebase
-      .firestore()
-      .collection("users")
-      .doc(`${userContext.userState.user.user.uid}`)
-      .collection("trades")
-      .add({
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        symbol: ticker,
-        desc: companyName.description,
-        price: currentPrice,
-        type: data.transactionType,
-        quantity: quantity,
-        total: parseFloat(quantity * currentPrice).toFixed(2),
-      })
-      .then((docRef) => {
-        console.log("Document written with ID: ", docRef.id);
-      })
-      .catch((error) => {
-        console.error("Error adding document: ", error);
-      });
-
-    await firebase
+  useEffect(() => {
+    firebase
       .firestore()
       .collection("users")
       .doc(`${userContext.userState.user.user.uid}`)
       .collection("holdings")
-      .doc(ticker)
-      .set({
-        symbol: ticker,
-        quantity: quantity,
-        desc: companyName.description,
-      });
+      .where("quantity", ">", 0)
+      .onSnapshot((snapshot) =>
+        setUserHoldings(
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data(),
+          }))
+        )
+      );
+  }, []);
 
-    setTicker("");
-    setCompanyName("");
-    setCurrentPrice("");
-    setQuantity("");
-    reset({
-      transactionType: "",
-    });
+  useEffect(() => {
+    firebase
+      .firestore()
+      .collection("users")
+      .doc(`${userContext.userState.user.user.uid}`)
+      .onSnapshot((doc) => {
+        console.log("Current data: ", doc.data());
+        setCashBal(doc.data().cashBal);
+      });
+  }, []);
+
+  console.log(cashBal);
+
+  const onSubmit = async (data, event) => {
+    console.log(data);
+    if (
+      data.transactionType === "Buy" &&
+      !inHoldings &&
+      parseFloat(quantity * currentPrice).toFixed(2) <= cashBal
+    ) {
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("trades")
+        .add({
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          symbol: ticker.toUpperCase(),
+          desc: companyName.description,
+          price: currentPrice,
+          type: data.transactionType,
+          quantity: quantity,
+          total: parseFloat(quantity * currentPrice).toFixed(2),
+        })
+        .then((docRef) => {
+          console.log("Document written with ID: ", docRef.id);
+        })
+        .catch((error) => {
+          console.error("Error adding document: ", error);
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("holdings")
+        .doc(ticker)
+        .set({
+          symbol: ticker.toUpperCase(),
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          price: currentPrice,
+          quantity: firebase.firestore.FieldValue.increment(parseInt(quantity)),
+          desc: companyName.description,
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .update({
+          cashBal: firebase.firestore.FieldValue.increment(
+            -parseFloat(quantity * currentPrice).toFixed(2)
+          ),
+        });
+
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      reset({
+        transactionType: "",
+      });
+    }
+    if (
+      data.transactionType === "Buy" &&
+      inHoldings &&
+      parseFloat(quantity * currentPrice).toFixed(2) <= cashBal
+    ) {
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("trades")
+        .add({
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          symbol: ticker.toUpperCase(),
+          desc: companyName.description,
+          price: currentPrice,
+          type: data.transactionType,
+          quantity: quantity,
+          total: parseFloat(quantity * currentPrice).toFixed(2),
+        })
+        .then((docRef) => {
+          console.log("Document written with ID: ", docRef.id);
+        })
+        .catch((error) => {
+          console.error("Error adding document: ", error);
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("holdings")
+        .doc(ticker)
+        .update({
+          symbol: ticker.toUpperCase(),
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          price: currentPrice,
+          quantity: firebase.firestore.FieldValue.increment(parseInt(quantity)),
+          desc: companyName.description,
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .update({
+          cashBal: firebase.firestore.FieldValue.increment(
+            -parseFloat(quantity * currentPrice).toFixed(2)
+          ),
+        });
+
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      reset({
+        transactionType: "",
+      });
+    }
+    if (
+      data.transactionType === "Sell" &&
+      inHoldings &&
+      quantity <= parseInt(tickerHolding)
+    ) {
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("trades")
+        .add({
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          symbol: ticker.toUpperCase(),
+          desc: companyName.description,
+          price: currentPrice,
+          type: data.transactionType,
+          quantity: quantity,
+          total: parseFloat(quantity * currentPrice).toFixed(2),
+        })
+        .then((docRef) => {
+          console.log("Document written with ID: ", docRef.id);
+        })
+        .catch((error) => {
+          console.error("Error adding document: ", error);
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("holdings")
+        .doc(ticker)
+        .update({
+          symbol: ticker.toUpperCase(),
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          price: currentPrice,
+          quantity: firebase.firestore.FieldValue.increment(
+            parseInt(-quantity)
+          ),
+          desc: companyName.description,
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .update({
+          cashBal: firebase.firestore.FieldValue.increment(
+            parseFloat(quantity * currentPrice).toFixed(2)
+          ),
+        });
+
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      reset({
+        transactionType: "",
+      });
+    }
+    if (data.transactionType === "Sell" && !inHoldings) {
+      alert("No quantity to sell.");
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      reset({
+        transactionType: "",
+      });
+    }
+
+    if (
+      data.transactionType === "Sell" &&
+      inHoldings &&
+      quantity > parseInt(tickerHolding)
+    ) {
+      alert(
+        `Cannot sell more than ${tickerHolding} shares of ${ticker.toUpperCase()}`
+      );
+    }
+    if (
+      parseFloat(quantity * currentPrice).toFixed(2) > cashBal &&
+      transactionType === "Buy"
+    ) {
+      alert("No cash available.");
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      reset({
+        transactionType: "",
+      });
+    }
   };
   const [selectedTransType, setSelectedTransType] = useState("");
   const [ticker, setTicker] = useState("");
@@ -86,10 +290,12 @@ function Trade({ navigation }) {
   const [companyName, setCompanyName] = useState("");
   const [quantity, setQuantity] = useState("");
 
-  console.log(ticker);
   const tickerSearch = (text) => {
     if (ticker) {
-      fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`)
+      checkHoldings(ticker);
+      fetch(
+        `https://finnhub.io/api/v1/quote?symbol=${ticker.toUpperCase()}&token=${apiKey}`
+      )
         .then((response) => response.json())
         .then((data) => setCurrentPrice(data.c));
 
@@ -104,27 +310,42 @@ function Trade({ navigation }) {
     }
   };
 
-  const formatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  });
-
-  console.log([companyName.description, currentPrice]);
+  const checkHoldings = (symbol) => {
+    for (let i = 0; i < userHoldings.length; i++) {
+      if (userHoldings[i].id.toUpperCase() === symbol.toUpperCase()) {
+        console.log("Yes");
+        return (
+          setInHoldings(true), setTickerHoldings(userHoldings[i].data.quantity)
+        );
+      }
+    }
+    console.log("No");
+    setInHoldings(false);
+  };
+  console.log(tickerHolding);
   return (
     <View style={styles.container}>
+      <Text
+        style={{
+          color: "#fff",
+          fontSize: 18,
+          left: 100,
+          marginTop: 10,
+        }}
+      >
+        Cash: {Numeral(cashBal).format("$0,0")}
+      </Text>
       <ScrollView style={{ width: 320 }} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Order Form</Text>
 
         <TextInput
           style={styles.input}
-          onChangeText={(text) => setTicker(text.toLocaleUpperCase())}
+          onChangeText={(text) => setTicker(text)}
           onEndEditing={tickerSearch}
           value={ticker}
           placeholder="Enter Ticker"
           placeholderTextColor="#fff"
         />
-
         <Text
           style={{
             color: "#fff",
@@ -147,10 +368,9 @@ function Trade({ navigation }) {
           }}
         >
           <Text style={{ color: "#59e00f" }}>
-            {currentPrice ? formatter.format(currentPrice) : "$0"}
+            {currentPrice ? Numeral(currentPrice).format("$0,0.00") : "$0"}
           </Text>{" "}
         </Text>
-
         <Controller
           control={control}
           rules={{
@@ -182,7 +402,6 @@ function Trade({ navigation }) {
         {errors.transactionType && (
           <Text style={styles.error}>Please select transaction type.</Text>
         )}
-
         <TextInput
           style={styles.input}
           onChangeText={(text) => setQuantity(parseInt(text))}
@@ -193,8 +412,8 @@ function Trade({ navigation }) {
         {!quantity && <Text style={styles.error}>Please enter a quanty.</Text>}
         {currentPrice && quantity ? (
           <Text style={{ color: "#fff", fontSize: 18 }}>
-            Total:
-            {formatter.format(parseFloat(quantity * currentPrice).toFixed(2))}
+            Total:{" "}
+            {Numeral(parseFloat(quantity * currentPrice)).format("$0,0.00")}
           </Text>
         ) : null}
         <Button

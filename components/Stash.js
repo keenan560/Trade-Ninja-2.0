@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useContext } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { Button } from "react-native-elements";
 import { UserContext } from "../App";
+import Holding from "./Holding";
+import Numeral from "numeral";
 import * as firebase from "firebase";
 import "firebase/auth";
 //import "firebase/database";
@@ -21,6 +24,9 @@ const firebaseConfig = {
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
+
+const apiKey = "c43kis2ad3if0j0spuj0";
+
 function Stash({ navigation }) {
   const userContext = useContext(UserContext);
   const [holdings, setHoldings] = useState([]);
@@ -31,17 +37,69 @@ function Stash({ navigation }) {
       .collection("users")
       .doc(`${userContext.userState.user.user.uid}`)
       .collection("holdings")
-      .onSnapshot((querySnapshot) => {
-        querySnapshot.forEach((doc) => {
-          setHoldings(doc.data());
-        });
-      });
+      .where("quantity", ">", 0)
+      .onSnapshot((snapshot) =>
+        setHoldings(
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data(),
+          }))
+        )
+      );
   }, []);
-  console.log(holdings);
+
+  const marketValue = () => {
+    let value = 0;
+
+    for (let i = 0; i < holdings.length; i++) {
+      value +=
+        parseFloat(holdings[i].data.price) *
+        parseInt(holdings[i].data.quantity);
+    }
+    return value;
+  };
+
+  const getMarketValue = () => {
+    // fetch(
+    //   `https://finnhub.io/api/v1/quote?symbol=${ticker.toUpperCase()}&token=${apiKey}`
+    // )
+    //   .then((response) => response.json())
+    //   .then((data) => setCurrentPrice(data.c));
+
+    // fetch(`https://finnhub.io/api/v1/search?q=${ticker}&token=${apiKey}`)
+    //   .then((response) => response.json())
+    //   .then((data) => setCompanyName(data.result[0]));
+  };
 
   return (
     <View style={styles.container}>
-      <Text>Stash</Text>
+      {holdings ? (
+        <View>
+          <Text style={styles.marketValue}>
+            Amount Invested: {Numeral(marketValue()).format("$0,0.00")}
+          </Text>
+          <Button
+            title="Market Value"
+            buttonStyle={{ backgroundColor: "#4db20a", borderRadius: 10 }}
+            onPress={getMarketValue}
+          />
+          <Text style={styles.title}>{holdings.length} holdings</Text>
+        </View>
+      ) : (
+        <Text style={styles.title}>No holdings</Text>
+      )}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {holdings.map(({ id, data }) => (
+          <Holding
+            key={id}
+            desc={data.desc}
+            price={data.price}
+            quantity={data.quantity}
+            symbol={data.symbol}
+            timeStamp={data.timeStamp}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -54,5 +112,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     // backgroundColor: "",
+  },
+  title: {
+    marginBottom: 10,
+    marginTop: 10,
+
+    fontSize: 20,
+    textAlign: "center",
+  },
+  marketValue: {
+    marginBottom: 10,
+    marginTop: 10,
+    fontWeight: "bold",
+    fontSize: 20,
   },
 });
