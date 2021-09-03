@@ -8,6 +8,7 @@ import Trade from "./Trade";
 import Stash from "./Stash";
 import Settings from "./Settings";
 import Activity from "./Activity";
+import Community from "./Community";
 import { UserContext } from "../App";
 import * as firebase from "firebase";
 import "firebase/auth";
@@ -56,6 +57,10 @@ function Dashboard({ navigation }) {
             iconName = focused ? "history" : "chart-line";
             color = "#DD0012";
           }
+          if (route.name === "Community") {
+            iconName = focused ? "users" : "user-friends";
+            color = "#fff";
+          }
           if (route.name === "Settings") {
             iconName = focused ? "cogs" : "cog";
             color = "#385C67";
@@ -83,6 +88,11 @@ function Dashboard({ navigation }) {
       <Tab.Screen
         name="Activity"
         component={Activity}
+        options={{ tabBarBadge: null }}
+      />
+      <Tab.Screen
+        name="Community"
+        component={Community}
         options={{ tabBarBadge: null }}
       />
       <Tab.Screen

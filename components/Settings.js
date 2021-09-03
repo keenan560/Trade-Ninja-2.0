@@ -7,14 +7,14 @@ function Settings({ navigation }) {
   const userContext = useContext(UserContext);
 
   const logOut = () => {
-    userContext.userDispatch({
-      type: "logout",
-      payload: { user: null, isLogged: false },
-    });
-
-    setTimeout(() => {
-      navigation.navigate("Welcome");
-    }, 1000);
+    navigation.navigate("Welcome");
+    // userContext.userDispatch({
+    //   type: "logout",
+    //   payload: { user: null, isLogged: false },
+    // });
+    // setTimeout(() => {
+    //   navigation.navigate("Welcome");
+    // }, 1000);
   };
 
   return (

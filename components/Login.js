@@ -9,8 +9,6 @@ import "firebase/firestore";
 //import "firebase/functions";
 //import "firebase/storage";
 
-
-
 const firebaseConfig = {
   apiKey: "AIzaSyBwRxZbifzgYYu59xXbFmomJwA1802mV3Y",
   authDomain: "trade-ninja.firebaseapp.com",
@@ -44,10 +42,8 @@ function Login({ navigation }) {
           payload: { user: user, isLogged: true },
         });
 
-        setTimeout(() => {
-          setLoading(false);
-          navigation.navigate("Dashboard", { name: "Dashboard" });
-        }, 1000);
+        setLoading(false);
+        navigation.navigate("Dashboard", { name: "Dashboard" });
       })
       .catch((error) => {
         var errorCode = error.code;
@@ -74,6 +70,13 @@ function Login({ navigation }) {
         textContentType="password"
         onChangeText={(text) => setPassword(text)}
         secureTextEntry
+      />
+      <Button
+        title="Forgot Password"
+        titleStyle={{ color: "#0F59E0", fontSize: 14 }}
+        buttonStyle={{ textAlign: "left", backgroundColor: "#141414" }}
+        containerStyle={{ left: 100 }}
+        onPress={() => navigation.navigate("Password Reset")}
       />
       <Button
         buttonStyle={styles.button}
@@ -117,5 +120,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 50,
     fontWeight: "800",
+  },
+  forgot: {
+    color: "#0F59E0",
+    textAlign: "left",
   },
 });

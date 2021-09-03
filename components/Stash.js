@@ -4,6 +4,9 @@ import { Button } from "react-native-elements";
 import { UserContext } from "../App";
 import Holding from "./Holding";
 import Numeral from "numeral";
+import { FontAwesome5 } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
+
 import * as firebase from "firebase";
 import "firebase/auth";
 //import "firebase/database";
@@ -30,6 +33,10 @@ const apiKey = "c43kis2ad3if0j0spuj0";
 function Stash({ navigation }) {
   const userContext = useContext(UserContext);
   const [holdings, setHoldings] = useState([]);
+  const [marketV, setMarketV] = useState("");
+  const [newHoldings, setNewHoldings] = useState([]);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     firebase
@@ -48,6 +55,15 @@ function Stash({ navigation }) {
       );
   }, []);
 
+  useEffect(() => {
+    if (count > 0) {
+      setTimeout(() => {
+        setCount(0);
+        setLoading(false);
+      }, 5000);
+    }
+  }, [count]);
+
   const marketValue = () => {
     let value = 0;
 
@@ -59,30 +75,90 @@ function Stash({ navigation }) {
     return value;
   };
 
-  const getMarketValue = () => {
-    // fetch(
-    //   `https://finnhub.io/api/v1/quote?symbol=${ticker.toUpperCase()}&token=${apiKey}`
-    // )
-    //   .then((response) => response.json())
-    //   .then((data) => setCurrentPrice(data.c));
+  let mValue = 0;
 
-    // fetch(`https://finnhub.io/api/v1/search?q=${ticker}&token=${apiKey}`)
-    //   .then((response) => response.json())
-    //   .then((data) => setCompanyName(data.result[0]));
+  const getMarketValue = async () => {
+    await setLoading(true);
+    await setCount((previousCount) => previousCount + 1);
+    let mHoldings = [];
+    await holdings.map(({ id, data }) => {
+      let price = 0;
+      fetch(
+        `https://finnhub.io/api/v1/quote?symbol=${data.symbol.toUpperCase()}&token=${apiKey}`
+      )
+        .then((response) => response.json())
+        .then((api) => {
+          mValue += parseInt(data.quantity) * parseFloat(api.c);
+          setMarketV(mValue);
+          mHoldings.push({
+            price: api.c,
+            quantity: data.quantity,
+            symbol: data.symbol,
+            desc: data.desc,
+            timeStamp: data.timeStamp,
+          });
+        });
+    });
+    setNewHoldings(mHoldings);
+  };
+  const getNMV = async () => {
+    let newMV = 0;
+    await newHoldings.map((holding) => {
+      newMV += parseInt(holding.quantity) * parseFloat(holding.price);
+    });
+
+    return newMV;
+  };
+
+  const mDiff = () => {
+    let newValue = getNMV();
+
+    let diff = parseFloat(newValue) - parseFloat(marketValue());
+
+    switch (true) {
+      case marketV > marketValue():
+        return <FontAwesome5 name="level-up-alt" size={24} color="green" />;
+      case marketV < marketValue():
+        return <FontAwesome5 name="level-down-alt" size={24} color="red" />;
+      default:
+        return;
+        <MaterialIcons name="trending-neutral" size={24} color="black" />;
+    }
+  };
+
+  const newPrice = (symbol) => {
+    for (let i = 0; i < newHoldings.length; i++) {
+      if (newHoldings[i].symbol === symbol) {
+        return newHoldings[i].price;
+      }
+    }
   };
 
   return (
     <View style={styles.container}>
-      {holdings ? (
+      {holdings.length > 0 ? (
         <View>
           <Text style={styles.marketValue}>
             Amount Invested: {Numeral(marketValue()).format("$0,0.00")}
           </Text>
+
+          {marketV ? (
+            <Text style={styles.marketValue}>
+              Market Value: {Numeral(marketV).format("$0,0.00")}{" "}
+              <Text>{mDiff()}</Text>
+            </Text>
+          ) : (
+            <Text></Text>
+          )}
+
           <Button
             title="Market Value"
             buttonStyle={{ backgroundColor: "#4db20a", borderRadius: 10 }}
             onPress={getMarketValue}
+            disabled={count > 0 && true}
+            loading={loading}
           />
+
           <Text style={styles.title}>{holdings.length} holdings</Text>
         </View>
       ) : (
@@ -97,6 +173,7 @@ function Stash({ navigation }) {
             quantity={data.quantity}
             symbol={data.symbol}
             timeStamp={data.timeStamp}
+            newPrice={newHoldings && newPrice(data.symbol)}
           />
         ))}
       </ScrollView>

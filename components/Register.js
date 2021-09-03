@@ -1,5 +1,12 @@
-import React from "react";
-import { Text, View, TextInput, Alert, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Text,
+  View,
+  TextInput,
+  Alert,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "react-native-elements";
 import * as firebase from "firebase";
@@ -24,6 +31,22 @@ if (!firebase.apps.length) {
 }
 
 function Register({ navigation }) {
+  const [users, setUsers] = useState([]);
+  const [taken, setTaken] = useState(false);
+  useEffect(() => {
+    firebase
+      .firestore()
+      .collection("users")
+      .onSnapshot((snapshot) =>
+        setUsers(
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            data: doc.data(),
+          }))
+        )
+      );
+  }, []);
+
   const {
     control,
     handleSubmit,
@@ -31,133 +54,178 @@ function Register({ navigation }) {
     reset,
   } = useForm();
 
+  const checkNames = (text) => {
+    setTaken(false);
+    if (
+      users.find(
+        (user) =>
+          user.data.displayName.toLowerCase().trim() ===
+          text.toLowerCase().trim()
+      )
+    ) {
+      setTaken(true);
+      return true;
+    }
+    return false;
+  };
+
   const onSubmit = (data, event) => {
     event.preventDefault();
-    firebase
-      .auth()
-      .createUserWithEmailAndPassword(data.email, data.password)
-      .then((authUser) => {
-        authUser.user.updateProfile({
-          email: authUser.user.email,
-          firstName: authUser.user.firstName,
-          lastName: authUser.user.lastName,
-        });
-        console.log(authUser);
 
-        firebase
-          .firestore()
-          .collection("users")
-          .doc(`${authUser.user.uid}`)
-          .set({
-            id: authUser.user.uid,
+    if (!checkNames(data.displayName)) {
+      firebase
+        .auth()
+        .createUserWithEmailAndPassword(data.email, data.password)
+        .then((authUser) => {
+          authUser.user.updateProfile({
             email: authUser.user.email,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            cashBal: 100000
-          })
-          .catch((error) => alert(error.message));
-        alert("Please login " + data.firstName);
-        navigation.navigate("Login");
-      })
-      .catch((error) => alert(error.message));
+            firstName: authUser.user.firstName,
+            lastName: authUser.user.lastName,
+          });
 
-    reset({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-    });
+          firebase
+            .firestore()
+            .collection("users")
+            .doc(`${authUser.user.uid}`)
+            .set({
+              id: authUser.user.uid,
+              email: authUser.user.email,
+              displayName: data.displayName,
+              firstName: data.firstName,
+              lastName: data.lastName,
+              cashBal: 100000,
+            })
+            .catch((error) => alert(error.message));
+          alert("Please login " + data.firstName);
+          navigation.navigate("Login");
+        })
+        .catch((error) => alert(error.message));
+
+      reset({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+      });
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={{ fontSize: 20 }}>Enter your details below.</Text>
-      <Controller
-        control={control}
-        rules={{
-          required: true,
-        }}
-        render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            style={styles.input}
-            onBlur={onBlur}
-            onChangeText={onChange}
-            value={value}
-            placeholder="First Name"
-          />
+      <Text style={{ fontSize: 20, marginBottom: 20, marginTop: 20 }}>
+        Enter your details below.
+      </Text>
+      <ScrollView showsVerticalScrollIndicator={false} style={{ width: 320 }}>
+        <Controller
+          control={control}
+          rules={{
+            required: true,
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.input}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              placeholder="First Name"
+            />
+          )}
+          name="firstName"
+          defaultValue=""
+        />
+        {errors.firstName && (
+          <Text style={styles.error}>This is required.</Text>
         )}
-        name="firstName"
-        defaultValue=""
-      />
-      {errors.firstName && <Text style={styles.error}>This is required.</Text>}
 
-      <Controller
-        control={control}
-        rules={{
-          maxLength: 100,
-          required: true,
-        }}
-        render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            style={styles.input}
-            onBlur={onBlur}
-            onChangeText={onChange}
-            value={value}
-            placeholder="Last Name"
-          />
+        <Controller
+          control={control}
+          rules={{
+            maxLength: 100,
+            required: true,
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.input}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              placeholder="Last Name"
+            />
+          )}
+          name="lastName"
+          defaultValue=""
+        />
+        {errors.lastName && <Text style={styles.error}>This is required.</Text>}
+        <Controller
+          control={control}
+          rules={{
+            maxLength: 100,
+            required: true,
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.input}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              placeholder="Display Name"
+            />
+          )}
+          name="displayName"
+          defaultValue=""
+        />
+        {errors.displayName && (
+          <Text style={styles.error}>This is required.</Text>
         )}
-        name="lastName"
-        defaultValue=""
-      />
-      {errors.lastName && <Text style={styles.error}>This is required.</Text>}
+        {taken && <Text style={styles.error}>Cannot use display name</Text>}
 
-      <Controller
-        control={control}
-        rules={{
-          maxLength: 100,
-          required: true,
-          pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-        }}
-        render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            style={styles.input}
-            onBlur={onBlur}
-            onChangeText={onChange}
-            value={value}
-            placeholder="Email Address"
-          />
+        <Controller
+          control={control}
+          rules={{
+            maxLength: 100,
+            required: true,
+            pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.input}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              placeholder="Email Address"
+            />
+          )}
+          name="email"
+          defaultValue=""
+        />
+        {errors.email && (
+          <Text style={styles.error}>Please enter a valid email.</Text>
         )}
-        name="email"
-        defaultValue=""
-      />
-      {errors.email && (
-        <Text style={styles.error}>Please enter a valid email.</Text>
-      )}
 
-      <Controller
-        control={control}
-        rules={{
-          maxLength: 100,
-          minLength: 6,
-          required: true,
-        }}
-        render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            style={styles.input}
-            onBlur={onBlur}
-            onChangeText={onChange}
-            value={value}
-            placeholder="Password"
-            secureTextEntry
-          />
+        <Controller
+          control={control}
+          rules={{
+            maxLength: 100,
+            minLength: 6,
+            required: true,
+          }}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.input}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              value={value}
+              placeholder="Password"
+              secureTextEntry
+            />
+          )}
+          name="password"
+          defaultValue=""
+        />
+        {errors.password && (
+          <Text style={styles.error}>Minimum of 6 characters.</Text>
         )}
-        name="password"
-        defaultValue=""
-      />
-      {errors.password && (
-        <Text style={styles.error}>Minimum of 6 characters.</Text>
-      )}
-
+      </ScrollView>
       <Button
         buttonStyle={styles.button}
         title="Register"
@@ -178,11 +246,12 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 18,
-    height: 100,
+    height: 90,
     width: 320,
     borderBottomColor: "#141414",
     borderBottomWidth: 1,
     marginBottom: 10,
+    marginTop: 10,
   },
   error: {
     color: "#E50914",
@@ -191,7 +260,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#141414",
     width: 275,
     height: 65,
-    marginBottom: 10,
+    marginBottom: 50,
     borderRadius: 10,
     marginTop: 75,
   },

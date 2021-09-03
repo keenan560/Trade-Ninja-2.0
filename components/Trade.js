@@ -70,8 +70,6 @@ function Trade({ navigation }) {
       });
   }, []);
 
-  console.log(cashBal);
-
   const onSubmit = async (data, event) => {
     console.log(data);
     if (
@@ -105,7 +103,7 @@ function Trade({ navigation }) {
         .collection("users")
         .doc(`${userContext.userState.user.user.uid}`)
         .collection("holdings")
-        .doc(ticker)
+        .doc(ticker.toUpperCase())
         .set({
           symbol: ticker.toUpperCase(),
           timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
@@ -128,6 +126,7 @@ function Trade({ navigation }) {
       setCompanyName("");
       setCurrentPrice("");
       setQuantity("");
+      setInHoldings(false);
       reset({
         transactionType: "",
       });
@@ -163,7 +162,7 @@ function Trade({ navigation }) {
         .collection("users")
         .doc(`${userContext.userState.user.user.uid}`)
         .collection("holdings")
-        .doc(ticker)
+        .doc(ticker.toUpperCase())
         .update({
           symbol: ticker.toUpperCase(),
           timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
@@ -186,6 +185,7 @@ function Trade({ navigation }) {
       setCompanyName("");
       setCurrentPrice("");
       setQuantity("");
+      setInHoldings(false);
       reset({
         transactionType: "",
       });
@@ -221,7 +221,7 @@ function Trade({ navigation }) {
         .collection("users")
         .doc(`${userContext.userState.user.user.uid}`)
         .collection("holdings")
-        .doc(ticker)
+        .doc(ticker.toUpperCase())
         .update({
           symbol: ticker.toUpperCase(),
           timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
@@ -246,6 +246,8 @@ function Trade({ navigation }) {
       setCompanyName("");
       setCurrentPrice("");
       setQuantity("");
+      setInHoldings(false);
+
       reset({
         transactionType: "",
       });
@@ -256,6 +258,8 @@ function Trade({ navigation }) {
       setCompanyName("");
       setCurrentPrice("");
       setQuantity("");
+      setInHoldings(false);
+
       reset({
         transactionType: "",
       });
@@ -271,17 +275,17 @@ function Trade({ navigation }) {
       );
     }
     if (
-      parseFloat(quantity * currentPrice).toFixed(2) > cashBal &&
-      transactionType === "Buy"
+      parseFloat(quantity * currentPrice).toFixed(2) > parseInt(cashBal) &&
+      data.transactionType === "Buy"
     ) {
       alert("No cash available.");
-      setTicker("");
-      setCompanyName("");
-      setCurrentPrice("");
-      setQuantity("");
-      reset({
-        transactionType: "",
-      });
+      // setTicker("");
+      // setCompanyName("");
+      // setCurrentPrice("");
+      // setQuantity("");
+      // reset({
+      //   transactionType: "",
+      // });
     }
   };
   const [selectedTransType, setSelectedTransType] = useState("");
@@ -307,22 +311,22 @@ function Trade({ navigation }) {
       setCurrentPrice("");
       setCompanyName("");
       setQuantity("");
+      setInHoldings(false);
     }
   };
 
   const checkHoldings = (symbol) => {
     for (let i = 0; i < userHoldings.length; i++) {
       if (userHoldings[i].id.toUpperCase() === symbol.toUpperCase()) {
-        console.log("Yes");
         return (
           setInHoldings(true), setTickerHoldings(userHoldings[i].data.quantity)
         );
       }
     }
-    console.log("No");
+
     setInHoldings(false);
   };
-  console.log(tickerHolding);
+
   return (
     <View style={styles.container}>
       <Text
@@ -369,8 +373,13 @@ function Trade({ navigation }) {
         >
           <Text style={{ color: "#59e00f" }}>
             {currentPrice ? Numeral(currentPrice).format("$0,0.00") : "$0"}
-          </Text>{" "}
+          </Text>
         </Text>
+        {inHoldings && (
+          <Text style={{ color: "#0F59E0", fontSize: 14 }}>
+            Currently own {tickerHolding} shares{" "}
+          </Text>
+        )}
         <Controller
           control={control}
           rules={{

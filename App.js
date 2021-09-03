@@ -5,6 +5,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import Welcome from "./components/Welcome";
 import Register from "./components/Register";
 import Login from "./components/Login";
+import PasswordReset from "./components/PasswordReset";
 import Dashboard from "./components/Dashboard";
 
 const Stack = createStackNavigator();
@@ -34,6 +35,7 @@ export default function App() {
           <Stack.Screen name="Welcome" component={Welcome} />
           <Stack.Screen name="Register" component={Register} />
           <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="Password Reset" component={PasswordReset} />
           <Stack.Screen name="Dashboard" component={Dashboard} />
         </Stack.Navigator>
       </NavigationContainer>

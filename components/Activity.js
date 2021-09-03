@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { UserContext } from "../App";
-import { ListItem, Avatar, Icon } from "react-native-elements";
+import { ListItem, Avatar, Icon, Input } from "react-native-elements";
 import Numeral from "numeral";
 import * as firebase from "firebase";
 import "firebase/auth";
@@ -27,6 +27,9 @@ if (!firebase.apps.length) {
 function Activity() {
   const userContext = useContext(UserContext);
   const [trades, setTrades] = useState([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [none, setNone] = useState(false);
 
   useEffect(() => {
     firebase
@@ -34,7 +37,6 @@ function Activity() {
       .collection("users")
       .doc(`${userContext.userState.user.user.uid}`)
       .collection("trades")
-      // .orderBy("timeStamp", "desc")
       .onSnapshot((snapshot) =>
         setTrades(
           snapshot.docs.map((doc) => ({
@@ -45,35 +47,86 @@ function Activity() {
       );
   }, []);
 
+  const searchHoldings = () => {
+    let results = trades.filter(
+      (trade) =>
+        trade.data.symbol.includes(query.toUpperCase()) ||
+        trade.data.desc.includes(query.toUpperCase())
+    );
+    if (results.length > 0) {
+      setResults(results);
+    } else {
+      setNone(true);
+      setTimeout(() => {
+        setNone(false);
+        setResults([]);
+      }, 2000);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={{ textAlign: "center", height: 25, margin: 10 }}>
         {trades.length} trades
       </Text>
+      <Input
+        placeholder="Search history"
+        leftIcon={{ type: "font-awesome", name: "search" }}
+        value={query}
+        onChangeText={(text) => setQuery(text.trim())}
+        onSubmitEditing={searchHoldings}
+      />
+      {none && (
+        <Text style={{ textAlign: "center", height: 20 }}>No results</Text>
+      )}
       <ScrollView>
-        {trades.map(({ id, data }) => (
-          <ListItem key={id} bottomDivider>
-            <Avatar
-              source={{ uri: data.symbol }}
-              size="medium"
-              rounded
-              title={data.symbol}
-              titleStyle={{ fontSize: 16, fontWeight: "bold" }}
-              avatarStyle={data.type === "Buy" ? styles.buy : styles.sold}
-            />
-            <ListItem.Content>
-              <ListItem.Title style={{ fontWeight: "bold" }}>
-                {data.desc}
-              </ListItem.Title>
-              <ListItem.Subtitle>
-                {data.type === "Buy" ? "brought" : "sold"}{" "}
-                {Numeral(data.quantity).format("0,0")} shares at{" "}
-                {Numeral(data.price).format("$0,0.00")} on{" "}
-                {new Date(data.timeStamp).toLocaleDateString()}
-              </ListItem.Subtitle>
-            </ListItem.Content>
-          </ListItem>
-        ))}
+        {results.length > 0
+          ? results.map(({ id, data }) => (
+              <ListItem key={id} bottomDivider>
+                <Avatar
+                  source={{ uri: data.symbol }}
+                  size="medium"
+                  rounded
+                  title={data.symbol}
+                  titleStyle={{ fontSize: 16, fontWeight: "bold" }}
+                  avatarStyle={data.type === "Buy" ? styles.buy : styles.sold}
+                />
+                <ListItem.Content>
+                  <ListItem.Title style={{ fontWeight: "bold" }}>
+                    {data.desc}
+                  </ListItem.Title>
+                  <ListItem.Subtitle>
+                    {data.type === "Buy" ? "brought" : "sold"}{" "}
+                    {Numeral(data.quantity).format("0,0")} shares at{" "}
+                    {Numeral(data.price).format("$0,0.00")} on{" "}
+                    {new Date(data.timeStamp).toLocaleDateString()}
+                  </ListItem.Subtitle>
+                </ListItem.Content>
+              </ListItem>
+            ))
+          : trades.map(({ id, data }) => (
+              <ListItem key={id} bottomDivider>
+                <Avatar
+                  source={{ uri: data.symbol }}
+                  size="medium"
+                  rounded
+                  title={data.symbol}
+                  titleStyle={{ fontSize: 16, fontWeight: "bold" }}
+                  avatarStyle={data.type === "Buy" ? styles.buy : styles.sold}
+                />
+                <ListItem.Content>
+                  <ListItem.Title style={{ fontWeight: "bold" }}>
+                    {data.desc}
+                  </ListItem.Title>
+                  <ListItem.Subtitle>
+                    {data.type === "Buy" ? "brought" : "sold"}{" "}
+                    {Numeral(data.quantity).format("0,0")} shares at{" "}
+                    {Numeral(data.price).format("$0,0.00")} on{" "}
+                    {new Date(data.timeStamp).toLocaleDateString()}
+                  </ListItem.Subtitle>
+                </ListItem.Content>
+              </ListItem>
+            ))}
       </ScrollView>
     </View>
   );
@@ -89,7 +142,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   buy: {
- 
     color: "#fff",
   },
   buyText: {},
