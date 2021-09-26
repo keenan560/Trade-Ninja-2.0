@@ -134,6 +134,37 @@ function Stash({ navigation }) {
     }
   };
 
+  const delta = () => {
+    let diff = marketV - marketValue();
+    switch (true) {
+      case diff > 0:
+        return (
+          <Text style={{ color: "green" }}>
+            {Numeral(marketV - marketValue()).format("$0,0.00")}{" "}
+            <FontAwesome5 name="rocket" size={24} color="green" />
+          </Text>
+        );
+      case diff < 0:
+        return (
+          <Text style={{ color: "red" }}>
+            {Numeral(marketV - marketValue()).format("$0,0.00")}{" "}
+            <FontAwesome5 name="fire" size={24} color="red" />
+          </Text>
+        );
+      case diff == 0:
+        return (
+          <Text style={{ color: "black" }}>
+            {Numeral(marketV - marketValue()).format("$0,0.00")}{" "}
+            <MaterialIcons name="linear-scale" size={24} color="black" />
+          </Text>
+        );
+      default:
+        <Text style={{ color: "black" }}>
+          {Numeral(marketV - marketValue()).format("$0,0.00")}
+        </Text>;
+    }
+  };
+
   return (
     <View style={styles.container}>
       {holdings.length > 0 ? (
@@ -143,16 +174,21 @@ function Stash({ navigation }) {
           </Text>
 
           {marketV ? (
-            <Text style={styles.marketValue}>
-              Market Value: {Numeral(marketV).format("$0,0.00")}{" "}
-              <Text>{mDiff()}</Text>
-            </Text>
+            <View>
+              <Text style={styles.marketValue}>
+                Market Value: {Numeral(marketV).format("$0,0.00")}{" "}
+                <Text>{mDiff()}</Text>
+              </Text>
+              <Text style={styles.marketValue}>Delta: {delta()}</Text>
+            </View>
           ) : (
             <Text></Text>
           )}
 
           <Button
-            title="Market Value"
+            title="Analyze"
+            // titleStyle={{color: "#000"}}
+            // buttonStyle={{ backgroundColor: "#DFA40D", borderRadius: 10, }}
             buttonStyle={{ backgroundColor: "#4db20a", borderRadius: 10 }}
             onPress={getMarketValue}
             disabled={count > 0 && true}

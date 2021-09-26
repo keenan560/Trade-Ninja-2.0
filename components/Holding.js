@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import Numeral from "numeral";
+import { Button } from "react-native-elements";
 import { LinearGradient } from "expo-linear-gradient";
 import { FontAwesome5 } from "@expo/vector-icons";
 
@@ -82,6 +83,43 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
     }
   };
 
+  const analyze = (price, newPrice) => {
+    let delta = parseFloat(newPrice) - parseFloat(price);
+    let deltaPercent = delta / parseFloat(price);
+    console.log(delta, deltaPercent);
+
+    switch (true) {
+      case delta < 0:
+        return <Text style={styles.sell}>SELL</Text>;
+
+      case delta === 0:
+        return <Text style={styles.hold}>HOLD</Text>;
+
+      case deltaPercent >= 0.2:
+        return <Text style={styles.cashOut}>CASH OUT</Text>;
+
+      case deltaPercent <= 0.05:
+        return <Text style={styles.buy}>BUY</Text>;
+      default:
+        return <Text style={styles.wait}>WAIT</Text>;
+    }
+  };
+
+  const buttonRouter = () => {
+    let delta = parseFloat(newPrice) - parseFloat(price);
+    let deltaPercent = delta / parseFloat(price);
+    switch (true) {
+      case delta < 0:
+        return <Button title="Sell" buttonStyle={styles.buttonSell} />;
+
+      case deltaPercent >= 0.2:
+        return <Button title="Cash Out" buttonStyle={styles.buttonCashOut} />;
+
+      case deltaPercent <= 0.05:
+        return <Button title="Buy" buttonStyle={styles.buttonBuy} />;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -89,9 +127,18 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
         colors={["#DFA40D", "transparent"]}
         style={styles.background}
       >
-        <Text style={styles.symbol}>
-          {symbol} {newPrice && <Text>{priceDelta()}</Text>}
-        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text style={styles.symbol}>
+            {symbol} {newPrice && <Text>{priceDelta()}</Text>}
+          </Text>
+          {newPrice && analyze(price, newPrice)}
+        </View>
         <Text style={styles.desc}>{desc}</Text>
         <Text style={styles.price}>
           Brought at {Numeral(price).format("$0,0.00")}
@@ -109,7 +156,16 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
         </Text>
 
         <Text style={{ textAlign: "right", paddingRight: 10 }}>QTY:</Text>
-        <Text style={styles.quantity}>{Numeral(quantity).format("0,0")}</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyConten: "space-evenly",
+            width: "100%",
+          }}
+        >
+          {newPrice && buttonRouter()}
+          <Text style={styles.quantity}>{Numeral(quantity).format("0,0")}</Text>
+        </View>
       </LinearGradient>
     </View>
   );
@@ -148,8 +204,9 @@ const styles = StyleSheet.create({
   quantity: {
     textAlign: "right",
     fontWeight: "500",
-    fontSize: 50,
+    fontSize: 40,
     paddingRight: 10,
+    flex: 1
   },
   price: {
     textAlign: "left",
@@ -181,5 +238,73 @@ const styles = StyleSheet.create({
 
   arrow: {
     padding: 10,
+  },
+
+  sell: {
+    textAlign: "right",
+    fontWeight: "500",
+    fontSize: 20,
+    paddingRight: 15,
+    paddingTop: 10,
+    color: "red",
+  },
+  cashOut: {
+    textAlign: "right",
+    fontWeight: "500",
+    fontSize: 20,
+    paddingRight: 15,
+    paddingTop: 10,
+    color: "green",
+  },
+  buy: {
+    textAlign: "right",
+    fontWeight: "500",
+    fontSize: 20,
+    paddingRight: 15,
+    paddingTop: 10,
+    color: "green",
+  },
+  wait: {
+    textAlign: "right",
+    fontWeight: "500",
+    fontSize: 20,
+    paddingRight: 15,
+    paddingTop: 10,
+    color: "black",
+  },
+  hold: {
+    textAlign: "right",
+    fontWeight: "500",
+    fontSize: 20,
+    paddingRight: 15,
+    paddingTop: 10,
+    color: "black",
+  },
+
+  buttonSell: {
+    width: 160,
+    height: 50,
+    // backgroundColor: "#1f1f1f",
+    backgroundColor: "red",
+    borderRadius: 5,
+    marginLeft: 2,
+
+  },
+
+  buttonBuy: {
+    width: 160,
+    height: 50,
+    // backgroundColor: "#0F59E0",
+    backgroundColor: "green",
+    borderRadius: 5,
+    marginLeft: 2,
+  },
+  buttonCashOut: {
+    width: 160,
+    height: 50,
+    // backgroundColor: "#0F59E0",
+    backgroundColor: "green",
+    borderRadius: 5,
+    marginLeft: 2,
   },
 });

@@ -1,10 +1,11 @@
 import React, { useState, useContext, useEffect } from "react";
 import { View, Text, StyleSheet, TextInput, ScrollView } from "react-native";
 import { useForm, Controller, set } from "react-hook-form";
-import { Button } from "react-native-elements";
+import { Button, Tooltip, Overlay } from "react-native-elements";
 import { Picker } from "@react-native-picker/picker";
 import { UserContext } from "../App";
 import Numeral from "numeral";
+import { FontAwesome5 } from "@expo/vector-icons";
 import * as firebase from "firebase";
 import "firebase/auth";
 //import "firebase/database";
@@ -41,6 +42,9 @@ function Trade({ navigation }) {
   const [inHoldings, setInHoldings] = useState(false);
   const [tickerHolding, setTickerHoldings] = useState(0);
   const [cashBal, setCashBal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     firebase
@@ -71,9 +75,17 @@ function Trade({ navigation }) {
   }, []);
 
   const onSubmit = async (data, event) => {
-    console.log(data);
+    event.preventDefault();
+    setLoading(true);
+    setDisabled(true);
+    if (!quantity) {
+      setLoading(false);
+      setDisabled(false);
+      alert("Please enter a quantity!");
+    }
     if (
       data.transactionType === "Buy" &&
+      quantity &&
       !inHoldings &&
       parseFloat(quantity * currentPrice).toFixed(2) <= cashBal
     ) {
@@ -127,12 +139,16 @@ function Trade({ navigation }) {
       setCurrentPrice("");
       setQuantity("");
       setInHoldings(false);
+      setLoading(false);
+      setDisabled(false);
+      toggleOverlay();
       reset({
         transactionType: "",
       });
     }
     if (
       data.transactionType === "Buy" &&
+      quantity &&
       inHoldings &&
       parseFloat(quantity * currentPrice).toFixed(2) <= cashBal
     ) {
@@ -186,6 +202,9 @@ function Trade({ navigation }) {
       setCurrentPrice("");
       setQuantity("");
       setInHoldings(false);
+      setLoading(false);
+      setDisabled(false);
+      toggleOverlay();
       reset({
         transactionType: "",
       });
@@ -193,7 +212,8 @@ function Trade({ navigation }) {
     if (
       data.transactionType === "Sell" &&
       inHoldings &&
-      quantity <= parseInt(tickerHolding)
+      quantity <= parseInt(tickerHolding) &&
+      quantity > 0
     ) {
       await firebase
         .firestore()
@@ -247,6 +267,9 @@ function Trade({ navigation }) {
       setCurrentPrice("");
       setQuantity("");
       setInHoldings(false);
+      setLoading(false);
+      setDisabled(false);
+      toggleOverlay();
 
       reset({
         transactionType: "",
@@ -259,6 +282,8 @@ function Trade({ navigation }) {
       setCurrentPrice("");
       setQuantity("");
       setInHoldings(false);
+      setLoading(false);
+      setDisabled(false);
 
       reset({
         transactionType: "",
@@ -270,6 +295,8 @@ function Trade({ navigation }) {
       inHoldings &&
       quantity > parseInt(tickerHolding)
     ) {
+      setLoading(false);
+      setDisabled(false);
       alert(
         `Cannot sell more than ${tickerHolding} shares of ${ticker.toUpperCase()}`
       );
@@ -278,6 +305,8 @@ function Trade({ navigation }) {
       parseFloat(quantity * currentPrice).toFixed(2) > parseInt(cashBal) &&
       data.transactionType === "Buy"
     ) {
+      setLoading(false);
+      setDisabled(false);
       alert("No cash available.");
       // setTicker("");
       // setCompanyName("");
@@ -327,6 +356,12 @@ function Trade({ navigation }) {
     setInHoldings(false);
   };
 
+  const [visible, setVisible] = useState(false);
+
+  const toggleOverlay = () => {
+    setVisible(!visible);
+  };
+
   return (
     <View style={styles.container}>
       <Text
@@ -339,15 +374,47 @@ function Trade({ navigation }) {
       >
         Cash: {Numeral(cashBal).format("$0,0")}
       </Text>
+      <Overlay
+        isVisible={visible}
+        onBackdropPress={toggleOverlay}
+        backdropStyle={{
+          width: "100%",
+        }}
+        overlayStyle={{
+          width: "100%",
+          height: "auto",
+          backgroundColor: "#BCF29F",
+          borderRadius: 10,
+        }}
+      >
+        <Text style={{ textAlign: "center", fontSize: 18, color: "darkgreen" }}>
+          Trade successful!
+          {/* <FontAwesome5 name="check" size={30} color="green" /> */}
+        </Text>
+      </Overlay>
       <ScrollView style={{ width: 320 }} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Order Form</Text>
-
+        <Tooltip
+          popover={
+            <Text style={{ color: "#fff", fontWeight: "bold" }}>
+              A stock symbol is an arrangement of characters—usually
+              letters—representing publicly-traded securities on an exchange.
+              For example the symbol for Apple's stock is 'AAPL'.
+            </Text>
+          }
+          height={150}
+          width={300}
+        >
+          <View style={{ marginTop: 20, left: 300 }}>
+            <FontAwesome5 name="info-circle" size={18} color="#fff" />
+          </View>
+        </Tooltip>
         <TextInput
           style={styles.input}
           onChangeText={(text) => setTicker(text)}
           onEndEditing={tickerSearch}
           value={ticker}
-          placeholder="Enter Ticker"
+          placeholder={"Enter symbol"}
           placeholderTextColor="#fff"
         />
         <Text
@@ -425,10 +492,15 @@ function Trade({ navigation }) {
             {Numeral(parseFloat(quantity * currentPrice)).format("$0,0.00")}
           </Text>
         ) : null}
+
         <Button
           buttonStyle={styles.button}
           title={"Trade"}
           onPress={handleSubmit(onSubmit)}
+          loading={loading}
+          disabled={disabled}
+          disabledStyle={{ backgroundColor: "#141414" }}
+          // type='outline'
         />
       </ScrollView>
     </View>
@@ -459,7 +531,8 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   error: {
-    color: "#E50914",
+    // color: "#E50914",
+    color: "#DFA40D",
   },
   item: {
     backgroundColor: "#141414",
@@ -469,6 +542,15 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: "#0F59E0",
+    width: "100%",
+    height: 65,
+    marginBottom: 10,
+    borderRadius: 10,
+    marginTop: 65,
+  },
+
+  disabled: {
+    backgroundColor: "#CFCFCF",
     width: "100%",
     height: 65,
     marginBottom: 10,

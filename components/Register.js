@@ -32,6 +32,9 @@ if (!firebase.apps.length) {
 
 function Register({ navigation }) {
   const [users, setUsers] = useState([]);
+  const [password1, setPassword1] = useState("");
+
+  const [password2, setPassword2] = useState("");
   const [taken, setTaken] = useState(false);
   useEffect(() => {
     firebase
@@ -72,41 +75,11 @@ function Register({ navigation }) {
   const onSubmit = (data, event) => {
     event.preventDefault();
 
-    if (!checkNames(data.displayName)) {
-      firebase
-        .auth()
-        .createUserWithEmailAndPassword(data.email, data.password)
-        .then((authUser) => {
-          authUser.user.updateProfile({
-            email: authUser.user.email,
-            firstName: authUser.user.firstName,
-            lastName: authUser.user.lastName,
-          });
-
-          firebase
-            .firestore()
-            .collection("users")
-            .doc(`${authUser.user.uid}`)
-            .set({
-              id: authUser.user.uid,
-              email: authUser.user.email,
-              displayName: data.displayName,
-              firstName: data.firstName,
-              lastName: data.lastName,
-              cashBal: 100000,
-            })
-            .catch((error) => alert(error.message));
-          alert("Please login " + data.firstName);
-          navigation.navigate("Login");
-        })
-        .catch((error) => alert(error.message));
-
-      reset({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-      });
+    if (
+      !checkNames(data.displayName) &&
+      password1.toLowerCase() === password2.toLowerCase()
+    ) {
+      alert("passwords match && username ok");
     }
   };
 
@@ -201,35 +174,36 @@ function Register({ navigation }) {
         {errors.email && (
           <Text style={styles.error}>Please enter a valid email.</Text>
         )}
-
-        <Controller
-          control={control}
-          rules={{
-            maxLength: 100,
-            minLength: 6,
-            required: true,
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="Password"
-              secureTextEntry
-            />
-          )}
-          name="password"
-          defaultValue=""
+        <TextInput
+          style={styles.input}
+          onChangeText={(text) => setPassword1(text)}
+          value={password1}
+          placeholder="Password"
+          secureTextEntry
         />
-        {errors.password && (
-          <Text style={styles.error}>Minimum of 6 characters.</Text>
+
+        <TextInput
+          style={styles.input}
+          onChangeText={(text) => setPassword2(text)}
+          value={password2}
+          placeholder="Re-enter Password"
+          secureTextEntry
+        />
+        {password2.toLowerCase() !== password1.toLowerCase() && (
+          <Text style={styles.error}>Passwords do not match</Text>
         )}
       </ScrollView>
       <Button
         buttonStyle={styles.button}
         title="Register"
         onPress={handleSubmit(onSubmit)}
+        disabled={
+          password1.toLowerCase() !== password2.toLowerCase() ||
+          password1.length === 0 ||
+          password2.length === 0
+            ? true
+            : false
+        }
       />
     </View>
   );

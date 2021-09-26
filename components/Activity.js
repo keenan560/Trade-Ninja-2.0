@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useContext } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { UserContext } from "../App";
-import { ListItem, Avatar, Icon, Input } from "react-native-elements";
+import {
+  ListItem,
+  Avatar,
+  Icon,
+  Input,
+  SearchBar,
+  Button,
+} from "react-native-elements";
 import Numeral from "numeral";
 import * as firebase from "firebase";
 import "firebase/auth";
@@ -30,13 +37,20 @@ function Activity() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [none, setNone] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
-    firebase
+    pullData();
+  }, []);
+
+  const pullData = async () => {
+    await firebase
       .firestore()
       .collection("users")
       .doc(`${userContext.userState.user.user.uid}`)
       .collection("trades")
+      .orderBy("timeStamp", "desc")
       .onSnapshot((snapshot) =>
         setTrades(
           snapshot.docs.map((doc) => ({
@@ -45,36 +59,73 @@ function Activity() {
           }))
         )
       );
-  }, []);
+
+    return setDataLoading(false);
+  };
 
   const searchHoldings = () => {
-    let results = trades.filter(
-      (trade) =>
-        trade.data.symbol.includes(query.toUpperCase()) ||
-        trade.data.desc.includes(query.toUpperCase())
-    );
-    if (results.length > 0) {
-      setResults(results);
-    } else {
-      setNone(true);
-      setTimeout(() => {
-        setNone(false);
-        setResults([]);
-      }, 2000);
-    }
+    setSearchLoading(true);
+    setTimeout(() => {
+      let results = trades.filter(
+        (trade) =>
+          trade.data.symbol.includes(query.toUpperCase()) ||
+          trade.data.desc.includes(query.toUpperCase())
+      );
+      if (results.length > 0) {
+        setResults(results);
+        setSearchLoading(false);
+      } else {
+        setNone(true);
+        setSearchLoading(false);
+
+        setTimeout(() => {
+          setNone(false);
+          setResults([]);
+        }, 2000);
+      }
+    }, 500);
   };
 
   return (
     <View style={styles.container}>
+      <Button
+        type="clear"
+        loading={dataLoading}
+        buttonStyle={{ textAlign: "center", width: 100 }}
+        // title="Loading"
+      />
       <Text style={{ textAlign: "center", height: 25, margin: 10 }}>
-        {trades.length} trades
+        {trades.length} total trades
       </Text>
-      <Input
+      {results.length > 1 && query ? (
+        <Text style={{ textAlign: "center", height: 25, margin: 10 }}>
+          {results.length} trades
+        </Text>
+      ) : (
+        <Text style={{ textAlign: "center", height: 25, margin: 10 }}></Text>
+      )}
+      {/* <Input
         placeholder="Search history"
         leftIcon={{ type: "font-awesome", name: "search" }}
         value={query}
-        onChangeText={(text) => setQuery(text.trim())}
+        onChangeText={(text) => setQuery(text)}
         onSubmitEditing={searchHoldings}
+      /> */}
+      <SearchBar
+        placeholder="Search history"
+        leftIcon={{ type: "font-awesome", name: "search" }}
+        value={query}
+        onChangeText={(text) => setQuery(text)}
+        onSubmitEditing={searchHoldings}
+        showLoading={searchLoading}
+        inputContainerStyle={{ backgroundColor: "#fff" }}
+        containerStyle={{
+          backgroundColor: "#fff",
+          borderTopWidth: 0,
+          borderBottomWidth: 0.5,
+          borderColor: "gray",
+        }}
+        inputStyle={{ color: "#000" }}
       />
       {none && (
         <Text style={{ textAlign: "center", height: 20 }}>No results</Text>

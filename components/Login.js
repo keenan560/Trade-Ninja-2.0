@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     color: "#E50914",
     textAlign: "center",
     marginBottom: 50,
-    fontWeight: "800",
+    fontWeight: "bold",
   },
   forgot: {
     color: "#0F59E0",
