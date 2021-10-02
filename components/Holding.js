@@ -1,7 +1,7 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TextInput } from "react-native";
 import Numeral from "numeral";
-import { Button } from "react-native-elements";
+import { Button, Overlay } from "react-native-elements";
 import { LinearGradient } from "expo-linear-gradient";
 import { FontAwesome5 } from "@expo/vector-icons";
 
@@ -110,18 +110,82 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
     let deltaPercent = delta / parseFloat(price);
     switch (true) {
       case delta < 0:
-        return <Button title="Sell" buttonStyle={styles.buttonSell} />;
+        return (
+          <Button
+            title="Sell"
+            buttonStyle={styles.buttonSell}
+            onPress={toggleOverlay}
+          />
+        );
 
       case deltaPercent >= 0.2:
-        return <Button title="Cash Out" buttonStyle={styles.buttonCashOut} />;
+        return (
+          <Button
+            title="Cash Out"
+            buttonStyle={styles.buttonCashOut}
+            onPress={toggleOverlay}
+          />
+        );
 
       case deltaPercent <= 0.05:
-        return <Button title="Buy" buttonStyle={styles.buttonBuy} />;
+        return (
+          <Button
+            title="Buy"
+            buttonStyle={styles.buttonBuy}
+            onPress={toggleOverlay}
+          />
+        );
     }
+  };
+
+  const [visible, setVisible] = useState(false);
+  const [shareCount, setShareCount] = useState(quantity);
+
+  const toggleOverlay = () => {
+    setVisible(!visible);
+  };
+
+  const incrementShareCount = () => {
+    setShareCount((previousCount) => previousCount + 1);
+  };
+  const decrementShareCount = () => {
+    setShareCount((previousCount) => previousCount - 1);
   };
 
   return (
     <View style={styles.container}>
+      <Overlay
+        isVisible={visible}
+        onBackdropPress={toggleOverlay}
+        overlayStyle={{ width: 360, height: 275 }}
+      >
+        <View
+          style={{ justifyContent: "center", alignItems: "center", flex: 1 }}
+        >
+          <Text style={{ fontSize: 18, marginBottom: 20 }}>
+            How many shares?{" "}
+          </Text>
+          <View style={styles.shareCountContainer}>
+            <TextInput style={styles.input}/>
+            {/* <Button
+              type="solid"=
+              title="+"
+              buttonStyle={styles.increment}
+              onPress={incrementShareCount}
+              disabled={shareCount === quantity}
+            />
+            <Text style={styles.shareCount}>{shareCount}</Text>
+            <Button
+              type="solid"
+              title="-"
+              buttonStyle={styles.decrement}
+              onPress={decrementShareCount}
+              disabled={shareCount === 1}
+            /> */}
+          </View>
+          {buttonRouter()}
+        </View>
+      </Overlay>
       <LinearGradient
         // Background Linear Gradient
         colors={["#DFA40D", "transparent"]}
@@ -206,7 +270,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     fontSize: 40,
     paddingRight: 10,
-    flex: 1
+    flex: 1,
   },
   price: {
     textAlign: "left",
@@ -288,7 +352,6 @@ const styles = StyleSheet.create({
     backgroundColor: "red",
     borderRadius: 5,
     marginLeft: 2,
-
   },
 
   buttonBuy: {
@@ -306,5 +369,39 @@ const styles = StyleSheet.create({
     backgroundColor: "green",
     borderRadius: 5,
     marginLeft: 2,
+  },
+
+  shareCountContainer: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 30,
+  },
+
+  shareCount: {
+    fontSize: 40,
+    // marginRight: 25,
+    // marginleft: 25,
+  },
+  increment: {
+    width: 75,
+    height: 50,
+    borderRadius: 5,
+  },
+  decrement: {
+    width: 75,
+    height: 50,
+    height: 50,
+  },
+  input: {
+    fontSize: 40,
+    height: 90,
+    width: 320,
+    borderBottomColor: "#141414",
+    borderBottomWidth: 1,
+    marginBottom: 10,
+    marginTop: 10,
+    textAlign: "center",
   },
 });

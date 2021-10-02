@@ -14,6 +14,7 @@ import * as firebase from "firebase";
 import "firebase/auth";
 //import "firebase/database";
 import "firebase/firestore";
+import { set } from "react-hook-form";
 //import "firebase/functions";
 //import "firebase/storage";
 
@@ -41,11 +42,7 @@ function Activity() {
   const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
-    pullData();
-  }, []);
-
-  const pullData = async () => {
-    await firebase
+    firebase
       .firestore()
       .collection("users")
       .doc(`${userContext.userState.user.user.uid}`)
@@ -59,9 +56,7 @@ function Activity() {
           }))
         )
       );
-
-    return setDataLoading(false);
-  };
+  }, []);
 
   const searchHoldings = () => {
     setSearchLoading(true);
@@ -88,12 +83,6 @@ function Activity() {
 
   return (
     <View style={styles.container}>
-      <Button
-        type="clear"
-        loading={dataLoading}
-        buttonStyle={{ textAlign: "center", width: 100 }}
-        // title="Loading"
-      />
       <Text style={{ textAlign: "center", height: 25, margin: 10 }}>
         {trades.length} total trades
       </Text>
