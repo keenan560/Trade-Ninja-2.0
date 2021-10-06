@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TextInput } from "react-native";
 import Numeral from "numeral";
 import { Button, Overlay } from "react-native-elements";
 import { LinearGradient } from "expo-linear-gradient";
+import { useForm, Controller, set } from "react-hook-form";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
 
 import * as firebase from "firebase";
 import "firebase/auth";
@@ -138,6 +140,39 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
     }
   };
 
+  const directionRouter = () => {
+    let delta = parseFloat(newPrice) - parseFloat(price);
+    let deltaPercent = delta / parseFloat(price);
+    switch (true) {
+      case delta < 0:
+        return (
+          <Button
+            title="Submit"
+            buttonStyle={styles.buttonSell}
+            onPress={handleSubmit(handleTrade)}
+          />
+        );
+
+      case deltaPercent >= 0.2:
+        return (
+          <Button
+            title="Submit"
+            buttonStyle={styles.buttonCashOut}
+            onPress={handleSubmit(handleTrade)}
+          />
+        );
+
+      case deltaPercent <= 0.05:
+        return (
+          <Button
+            title="Submit"
+            buttonStyle={styles.buttonBuy}
+            onPress={handleSubmit(handleTrade)}
+          />
+        );
+    }
+  };
+
   const [visible, setVisible] = useState(false);
   const [shareCount, setShareCount] = useState(quantity);
 
@@ -152,21 +187,277 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
     setShareCount((previousCount) => previousCount - 1);
   };
 
+  const [loading, setLoading] = useState(false);
+  const handleTrade = async (data) => {
+    if (!shareCount || shareCount > quantity) {
+      // setLoading(false);
+      // setDisabled(false);
+      alert(
+        "Please enter a quantity that and it must be more than 0 and less than the quantity owned!"
+      );
+    }
+    if (
+      data.transactionType === "Buy" &&
+      shareCount &&
+      parseFloat(shareCount * currentPrice).toFixed(2) <= cashBal
+    ) {
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("trades")
+        .add({
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          symbol: ticker.toUpperCase(),
+          desc: companyName.description,
+          price: currentPrice,
+          type: data.transactionType,
+          quantity: shareCount,
+          total: parseFloat(shareCount * currentPrice).toFixed(2),
+        })
+        .then((docRef) => {
+          console.log("Document written with ID: ", docRef.id);
+        })
+        .catch((error) => {
+          console.error("Error adding document: ", error);
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("holdings")
+        .doc(ticker.toUpperCase())
+        .set({
+          symbol: ticker.toUpperCase(),
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          price: currentPrice,
+          quantity: firebase.firestore.FieldValue.increment(parseInt(quantity)),
+          desc: companyName.description,
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .update({
+          cashBal: firebase.firestore.FieldValue.increment(
+            -parseFloat(quantity * currentPrice).toFixed(2)
+          ),
+        });
+
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      setInHoldings(false);
+      setLoading(false);
+      setDisabled(false);
+      toggleOverlay();
+      reset({
+        transactionType: "",
+      });
+    }
+    if (
+      data.transactionType === "Buy" &&
+      quantity &&
+      inHoldings &&
+      parseFloat(quantity * currentPrice).toFixed(2) <= cashBal
+    ) {
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("trades")
+        .add({
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          symbol: ticker.toUpperCase(),
+          desc: companyName.description,
+          price: currentPrice,
+          type: data.transactionType,
+          quantity: quantity,
+          total: parseFloat(quantity * currentPrice).toFixed(2),
+        })
+        .then((docRef) => {
+          console.log("Document written with ID: ", docRef.id);
+        })
+        .catch((error) => {
+          console.error("Error adding document: ", error);
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("holdings")
+        .doc(ticker.toUpperCase())
+        .update({
+          symbol: ticker.toUpperCase(),
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          price: currentPrice,
+          quantity: firebase.firestore.FieldValue.increment(parseInt(quantity)),
+          desc: companyName.description,
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .update({
+          cashBal: firebase.firestore.FieldValue.increment(
+            -parseFloat(quantity * currentPrice).toFixed(2)
+          ),
+        });
+
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      setInHoldings(false);
+      setLoading(false);
+      setDisabled(false);
+      toggleOverlay();
+      reset({
+        transactionType: "",
+      });
+    }
+    if (
+      data.transactionType === "Sell" &&
+      inHoldings &&
+      quantity <= parseInt(tickerHolding) &&
+      quantity > 0
+    ) {
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("trades")
+        .add({
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          symbol: ticker.toUpperCase(),
+          desc: companyName.description,
+          price: currentPrice,
+          type: data.transactionType,
+          quantity: quantity,
+          total: parseFloat(quantity * currentPrice).toFixed(2),
+        })
+        .then((docRef) => {
+          console.log("Document written with ID: ", docRef.id);
+        })
+        .catch((error) => {
+          console.error("Error adding document: ", error);
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("holdings")
+        .doc(ticker.toUpperCase())
+        .update({
+          symbol: ticker.toUpperCase(),
+          timeStamp: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          price: currentPrice,
+          quantity: firebase.firestore.FieldValue.increment(
+            parseInt(-quantity)
+          ),
+          desc: companyName.description,
+        });
+
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .update({
+          cashBal: firebase.firestore.FieldValue.increment(
+            parseFloat(quantity * currentPrice).toFixed(2)
+          ),
+        });
+
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      setInHoldings(false);
+      setLoading(false);
+      setDisabled(false);
+      toggleOverlay();
+
+      reset({
+        transactionType: "",
+      });
+    }
+    if (data.transactionType === "Sell" && !inHoldings) {
+      alert("No quantity to sell.");
+      setTicker("");
+      setCompanyName("");
+      setCurrentPrice("");
+      setQuantity("");
+      setInHoldings(false);
+      setLoading(false);
+      setDisabled(false);
+
+      reset({
+        transactionType: "",
+      });
+    }
+
+    if (
+      data.transactionType === "Sell" &&
+      inHoldings &&
+      quantity > parseInt(tickerHolding)
+    ) {
+      setLoading(false);
+      setDisabled(false);
+      alert(
+        `Cannot sell more than ${tickerHolding} shares of ${ticker.toUpperCase()}`
+      );
+    }
+    if (
+      parseFloat(quantity * currentPrice).toFixed(2) > parseInt(cashBal) &&
+      data.transactionType === "Buy"
+    ) {
+      setLoading(false);
+      setDisabled(false);
+      alert("No cash available.");
+      // setTicker("");
+      // setCompanyName("");
+      // setCurrentPrice("");
+      // setQuantity("");
+      // reset({
+      //   transactionType: "",
+      // });
+    }
+  };
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm();
+
   return (
     <View style={styles.container}>
       <Overlay
         isVisible={visible}
         onBackdropPress={toggleOverlay}
-        overlayStyle={{ width: 360, height: 275 }}
+        overlayStyle={{ width: 360, height: 460 }}
       >
         <View
           style={{ justifyContent: "center", alignItems: "center", flex: 1 }}
         >
-          <Text style={{ fontSize: 18, marginBottom: 20 }}>
-            How many shares?{" "}
+          <Text style={{ fontSize: 18, marginBottom: 20, fontWeight: "bold" }}>
+            How many shares of {symbol}?{" "}
           </Text>
           <View style={styles.shareCountContainer}>
-            <TextInput style={styles.input}/>
+            <TextInput
+              style={styles.input}
+              value={shareCount}
+              onChangeText={(text) => setShareCount(text)}
+              keyboardType="number-pad"
+            />
+
             {/* <Button
               type="solid"=
               title="+"
@@ -183,7 +474,37 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
               disabled={shareCount === 1}
             /> */}
           </View>
-          {buttonRouter()}
+          <Controller
+            control={control}
+            rules={{
+              maxLength: 100,
+              required: true,
+            }}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Picker
+                style={{
+                  width: "100%",
+                  height: 150,
+                  marginBottom: 0,
+                }}
+                selectedValue={value}
+                onValueChange={onChange}
+                onBlur={onBlur}
+                value={value}
+                itemStyle={styles.item}
+              >
+                <Picker.Item label="Select Transaction Type" value={null} />
+                <Picker.Item label="Buy" value="Buy" />
+                <Picker.Item label="Sell" value="Sell" />
+              </Picker>
+            )}
+            name="transactionType"
+            defaultValue=""
+          />
+          {errors.transactionType && (
+            <Text style={styles.error}>Please select transaction type.</Text>
+          )}
+          {directionRouter()}
         </View>
       </Overlay>
       <LinearGradient
@@ -403,5 +724,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 10,
     textAlign: "center",
+  },
+  item: {
+    backgroundColor: "#fff",
+    height: 100,
+    width: "100%",
+  },
+  error: {
+    color: "#E50914",
+    marginBottom: 20,
   },
 });
