@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { Button, Overlay } from "react-native-elements";
 import { UserContext } from "../App";
 import {
   ListItem,
@@ -7,7 +8,6 @@ import {
   Icon,
   Input,
   SearchBar,
-  Button,
 } from "react-native-elements";
 import Numeral from "numeral";
 import * as firebase from "firebase";
@@ -39,24 +39,39 @@ function Activity() {
   const [results, setResults] = useState([]);
   const [none, setNone] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  const toggleOverlay = () => {
+    setVisible(!visible);
+  };
+
   useEffect(() => {
-    firebase
-      .firestore()
-      .collection("users")
-      .doc(`${userContext.userState.user.user.uid}`)
-      .collection("trades")
-      .orderBy("timeStamp", "desc")
-      .onSnapshot((snapshot) =>
-        setTrades(
-          snapshot.docs.map((doc) => ({
-            id: doc.id,
-            data: doc.data(),
-          }))
-        )
-      );
+    toggleOverlay();
+    loadTrades();
   }, []);
+
+  const loadTrades = async () => {
+    try {
+      await firebase
+        .firestore()
+        .collection("users")
+        .doc(`${userContext.userState.user.user.uid}`)
+        .collection("trades")
+        .orderBy("timeStamp", "desc")
+        .onSnapshot((snapshot) => {
+          setVisible(false);
+          setTrades(
+            snapshot.docs.map((doc) => ({
+              id: doc.id,
+              data: doc.data(),
+            }))
+          );
+        });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const searchHoldings = () => {
     setSearchLoading(true);
@@ -83,6 +98,23 @@ function Activity() {
 
   return (
     <View style={styles.container}>
+      <Overlay
+        isVisible={visible}
+        onBackdropPress={toggleOverlay}
+        overlayStyle={{ width: 320, height: 53 }}
+      >
+        <View
+          style={{
+            justifyContent: "center",
+            alignItems: "center",
+            flexDirection: "row",
+          }}
+        >
+          <Text>Loading...</Text>
+          <Button type="clear" loading={visible} />
+        </View>
+      </Overlay>
+
       <Text style={{ textAlign: "center", height: 25, margin: 10 }}>
         {trades.length} total trades
       </Text>

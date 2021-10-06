@@ -27,6 +27,7 @@ if (!firebase.apps.length) {
 function Community({}) {
   const userContext = useContext(UserContext);
   const [users, setUsers] = useState([]);
+  const [activeUsers, setActiveUsers] = useState([]);
   useEffect(() => {
     firebase
       .firestore()
@@ -42,13 +43,21 @@ function Community({}) {
       );
   }, []);
 
+  useEffect(() => {
+    if (users) {
+      setActiveUsers(users.filter((user) => user.data.cashBal < 100000));
+    }
+  }, [users]);
+
+  console.log(activeUsers);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>
-        Let's see how you compare to other ninjas.
+        {activeUsers.length} / {users.length} Ninjas are investing
       </Text>
       <ScrollView style={{ width: 320 }} showsVerticalScrollIndicator={false}>
-        {users.map(({ id, data }, idx) => (
+        {activeUsers.map(({ id, data }, idx) => (
           <LinearGradient
             // Background Linear Gradient
             colors={
