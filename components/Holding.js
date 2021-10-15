@@ -5,6 +5,8 @@ import { Button, Overlay } from "react-native-elements";
 import { LinearGradient } from "expo-linear-gradient";
 import { useForm, Controller, set } from "react-hook-form";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { FontAwesome } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 
 import * as firebase from "firebase";
@@ -189,11 +191,12 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
 
   const [loading, setLoading] = useState(false);
   const handleTrade = async (data) => {
+    console.log(data);
     if (!shareCount || shareCount > quantity) {
       // setLoading(false);
       // setDisabled(false);
       alert(
-        "Please enter a quantity that and it must be more than 0 and less than the quantity owned!"
+        `Please enter a quantity that and it must be more than 0 and no greater than ${quantity}`
       );
     }
     if (
@@ -442,11 +445,31 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
       <Overlay
         isVisible={visible}
         onBackdropPress={toggleOverlay}
-        overlayStyle={{ width: 360, height: 460 }}
+        overlayStyle={{ width: 360, height: 500 }}
       >
         <View
           style={{ justifyContent: "center", alignItems: "center", flex: 1 }}
         >
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "flex-start",
+              left: 160,
+              marginRight: 5,
+            }}
+          >
+            <MaterialCommunityIcons
+              name="close-circle"
+              size={24}
+              color="black"
+              style={{
+                height: 50,
+                marginRight: 10,
+              }}
+              onPress={toggleOverlay}
+            />
+          </View>
+
           <Text style={{ fontSize: 18, marginBottom: 20, fontWeight: "bold" }}>
             How many shares of {symbol}?{" "}
           </Text>
@@ -457,22 +480,6 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
               onChangeText={(text) => setShareCount(text)}
               keyboardType="number-pad"
             />
-
-            {/* <Button
-              type="solid"=
-              title="+"
-              buttonStyle={styles.increment}
-              onPress={incrementShareCount}
-              disabled={shareCount === quantity}
-            />
-            <Text style={styles.shareCount}>{shareCount}</Text>
-            <Button
-              type="solid"
-              title="-"
-              buttonStyle={styles.decrement}
-              onPress={decrementShareCount}
-              disabled={shareCount === 1}
-            /> */}
           </View>
           <Controller
             control={control}
@@ -539,7 +546,21 @@ function Holding({ desc, price, quantity, symbol, timeStamp, newPrice }) {
         <Text style={styles.timestamp}>
           {new Date(timeStamp).toLocaleDateString()}
         </Text>
-
+        {/* <FontAwesome
+          name="certificate"
+          size={35}
+          color="#141414"
+          style={{ textAlign: "right", paddingRight: 10 }}
+        /> */}
+        <MaterialCommunityIcons
+          name="seal-variant"
+          size={35}
+          color="#141414"
+          style={{
+            textAlign: "right",
+            paddingRight: 10,
+          }}
+        />
         <Text style={{ textAlign: "right", paddingRight: 10 }}>QTY:</Text>
         <View
           style={{
@@ -569,9 +590,15 @@ const styles = StyleSheet.create({
     height: "auto",
     // borderWidth: 0.5,
     padding: 10,
+    // shadowOpacity: 0.7,
+    // shadowOffset: { width: 6, height: 12 },
   },
   background: {
-    borderRadius: 12,
+    borderRadius: 1,
+    borderColor: "#141414",
+    borderWidth: 5,
+    elevation: 5,
+    shadowColor: "#141414",
   },
   symbol: {
     fontSize: 30,

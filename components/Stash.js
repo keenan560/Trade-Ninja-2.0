@@ -75,6 +75,12 @@ function Stash({ navigation }) {
     return value;
   };
 
+  const orderHoldings = () => {
+    return holdings.sort((a, b) => a.data.timeStamp - b.data.timeStamp);
+  };
+
+  console.log(orderHoldings());
+
   let mValue = 0;
 
   const getMarketValue = async () => {
@@ -187,8 +193,6 @@ function Stash({ navigation }) {
 
           <Button
             title="Analyze"
-            // titleStyle={{color: "#000"}}
-            // buttonStyle={{ backgroundColor: "#DFA40D", borderRadius: 10, }}
             buttonStyle={{ backgroundColor: "#4db20a", borderRadius: 10 }}
             onPress={getMarketValue}
             disabled={count > 0 && true}

@@ -381,10 +381,10 @@ function Trade({ navigation }) {
           width: "100%",
         }}
         overlayStyle={{
-          width: "100%",
+          width: "90%",
           height: "auto",
           backgroundColor: "#BCF29F",
-          borderRadius: 10,
+          borderRadius: 5,
         }}
       >
         <Text style={{ textAlign: "center", fontSize: 18, color: "darkgreen" }}>
